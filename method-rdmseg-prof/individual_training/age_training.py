@@ -10,11 +10,6 @@ from pathlib import Path
 sys.path.append("/content/MERP")
 sys.path.append("/content/MERP/method-rdmseg-prof")
 
-# Allow imports from the project root and method folder
-# sys.path.insert(0, str(PROJECT_ROOT))
-# sys.path.insert(0, str(METHOD_DIR))
-
-print(sys.path)
 import glob
 import argparse
 import numpy as np
@@ -32,8 +27,6 @@ from util_method import save_model, load_model, plot_pred_against, plot_pred_com
 from dataset import rdm_dataset as dataset_class
 ### to edit accordingly.
 from networks import lstm_single as archi
-
-from ave_exp_by_prof import ave_exps_by_profile
 
 #####################
 ####    Train    ####
