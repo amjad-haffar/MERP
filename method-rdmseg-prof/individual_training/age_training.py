@@ -472,9 +472,27 @@ if __name__ == "__main__":
     ########################
     
 
-    train_loader = dataloader_prep(train_feat_dict, exps, args)
-    valid_loader = dataloader_prep(valid_feat_dict, exps, args)
-    test_loader = dataloader_prep(test_feat_dict, exps, args)
+    train_loader, age_mean, age_std = dataloader_prep(
+    train_feat_dict,
+    exps,
+    args,
+    )
+
+    valid_loader, _, _ = dataloader_prep(
+        valid_feat_dict,
+        exps,
+        args,
+        age_mean,
+        age_std,
+    )
+
+    test_loader, _, _ = dataloader_prep(
+        test_feat_dict,
+        exps,
+        args,
+        age_mean,
+        age_std,
+    )
     
     model, val_ave_mse, val_ave_r, num_epochs = train(train_loader, model, valid_loader, args)
 
