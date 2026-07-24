@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.append("/content/MERP")
 sys.path.append("/content/MERP/method-rdmseg-prof")
+
 DATA_DIR = "/content/drive/MyDrive/MERP/data"
 
 import glob
@@ -369,16 +370,16 @@ if __name__ == "__main__":
 
     # load the data 
     # read audio features from pickle
-    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'data/train_feats.pkl'))
-    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'data/valid_feats.pkl'))
-    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'data/test_feats.pkl'))
+    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'train_feats.pkl'))
+    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'valid_feats.pkl'))
+    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'test_feats.pkl'))
     # read labels from pickle
     
     # exps = pd.read_pickle('data/exps_std_a_profile_ave.pkl')
     if args.affect_type == "valences":
-        exps = pd.read_pickle(os.path.join(DATA_DIR, "data/exps_individual_valence_age.pkl"))
+        exps = pd.read_pickle(os.path.join(DATA_DIR, "exps_individual_valence_age.pkl"))
     elif args.affect_type == "arousals":
-        exps = pd.read_pickle(os.path.join(DATA_DIR,"data/exps_individual_arousal_age.pkl"))
+        exps = pd.read_pickle(os.path.join(DATA_DIR,"exps_individual_arousal_age.pkl"))
     else:
         raise ValueError("Unknown affect type.")
     # print(exps.head())
