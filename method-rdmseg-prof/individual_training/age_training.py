@@ -9,8 +9,7 @@ from pathlib import Path
 
 sys.path.append("/content/MERP")
 sys.path.append("/content/MERP/method-rdmseg-prof")
-
-DATA_DIR = "/content/drive/MyDrive/MERP/data"
+DATA_DIR = "/content/MERP/data"
 
 import glob
 import argparse
