@@ -370,8 +370,8 @@ if __name__ == "__main__":
     # load the data 
     # read audio features from pickle
     train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'train_feats.pkl'))
-    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'valid_feats.pkl'))
-    train_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'test_feats.pkl'))
+    valid_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'valid_feats.pkl'))
+    test_feat_dict = util.load_pickle(os.path.join(DATA_DIR, 'test_feats.pkl'))
     # read labels from pickle
     
     # exps = pd.read_pickle('data/exps_std_a_profile_ave.pkl')
