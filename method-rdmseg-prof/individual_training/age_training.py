@@ -331,13 +331,20 @@ def single_test(
 
         # print(loss.item())
         output = reverse_windowing(outputs, args.lstm_size, step_size=args.lstm_size)
+        # Match reconstructed predictions and labels for plotting
+        plot_length = min(len(output), len(testlabel_trimmed))
+
+        output_plot = np.asarray(output)[:plot_length]
+        label_plot = np.asarray(testlabel_trimmed)[:plot_length]
 
         dir_path = os.path.dirname(os.path.realpath(__file__))
 
         # temp_plot_c = plot_pred_comparison(output, testlabels[j], np.mean(loss_mse_list), np.mean(loss_r_list))
-        c_axs[j].plot(output) #, label='prediction')
+        # c_axs[j].plot(output) #, label='prediction')
+        # c_axs[j].plot(testlabel_trimmed)
+        c_axs[j].plot(output_plot)
+        c_axs[j].plot(label_plot)
         # c_axs[j].plot(testlabels[j]) #, label='ground truth')
-        c_axs[j].plot(testlabel_trimmed)
         rloss = np.mean(loss_r_list)
         mseloss = np.mean(loss_mse_list)
         c_axs[j].set_title(f'mse: {mseloss:.5} || r: {rloss:.5}')
@@ -346,7 +353,8 @@ def single_test(
         
         # temp_plot_a = plot_pred_against(output, testlabels[j])
         # a_axs[j].scatter(testlabels[j], output, marker='x')
-        a_axs[j].scatter(testlabel_trimmed, output, marker='x')
+        # a_axs[j].scatter(testlabel_trimmed, output, marker='x')
+        a_axs[j].scatter(label_plot, output_plot, marker='x')
         
 
     c_fig.suptitle(f'{songurl}')
