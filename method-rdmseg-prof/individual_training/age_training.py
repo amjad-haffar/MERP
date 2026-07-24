@@ -225,7 +225,16 @@ def test(model, test_loader):
     return test_ave_mse, test_ave_r, sum_test
 
 
-def single_test(model, songurl, feat_dict, exps, args, filename_prefix=None):
+def single_test(
+    model,
+    songurl,
+    feat_dict,
+    exps,
+    args,
+    age_mean,
+    age_std,
+    filename_prefix=""
+):
     '''
         exps - the original exps with many workers
     '''
@@ -243,15 +252,37 @@ def single_test(model, songurl, feat_dict, exps, args, filename_prefix=None):
     # print(len(testfeat))
     # print(len(testlabel))
 
-    testinput_w = windowing(testfeat, args.lstm_size, step_size=args.lstm_size)
-    
-    c_fig, c_axs = plt.subplots(len(testprofiles),sharex=True)
-    a_fig, a_axs = plt.subplots(len(testprofiles),sharex=True)
-
+    c_fig, c_axs = plt.subplots(len(testprofiles), sharex=True)
+    a_fig, a_axs = plt.subplots(len(testprofiles), sharex=True)
 
     for j in np.arange(len(testlabels)):
 
-        testlabel_w = windowing(testlabels[j], args.lstm_size, step_size=args.lstm_size)
+        # Use only the portion available in both audio features and labels
+        common_length = min(len(testfeat), len(testlabels[j]))
+
+        # Remove the incomplete final window
+        usable_length = (
+            common_length // args.lstm_size
+        ) * args.lstm_size
+
+        if usable_length == 0:
+            print(f"Skipping {songurl}: sequence is shorter than one window")
+            continue
+
+        testfeat_trimmed = np.asarray(testfeat)[:usable_length]
+        testlabel_trimmed = np.asarray(testlabels[j])[:usable_length]
+
+        testinput_w = windowing(
+            testfeat_trimmed,
+            args.lstm_size,
+            step_size=args.lstm_size
+        )
+
+        testlabel_w = windowing(
+            testlabel_trimmed,
+            args.lstm_size,
+            step_size=args.lstm_size
+        )
 
         outputs = []
         loss_mse_list = []
@@ -260,11 +291,8 @@ def single_test(model, songurl, feat_dict, exps, args, filename_prefix=None):
         with torch.no_grad():
             for i in np.arange(len(testinput_w)):
                 
-                profile = testprofiles[j]
-                if hasattr(profile, '__iter__'):
-                    profile = list(profile)
-                else:
-                    profile = [profile]
+                profile = (float(testprofiles[j]) - age_mean) / age_std
+                profile = [profile]
 
                 testprofiles_repeat = [profile for a in np.arange(len(testinput_w[i]))]
                 # print(np.shape(testprofiles_repeat))
@@ -308,7 +336,8 @@ def single_test(model, songurl, feat_dict, exps, args, filename_prefix=None):
 
         # temp_plot_c = plot_pred_comparison(output, testlabels[j], np.mean(loss_mse_list), np.mean(loss_r_list))
         c_axs[j].plot(output) #, label='prediction')
-        c_axs[j].plot(testlabels[j]) #, label='ground truth')
+        # c_axs[j].plot(testlabels[j]) #, label='ground truth')
+        c_axs[j].plot(testlabel_trimmed)
         rloss = np.mean(loss_r_list)
         mseloss = np.mean(loss_mse_list)
         c_axs[j].set_title(f'mse: {mseloss:.5} || r: {rloss:.5}')
@@ -316,7 +345,8 @@ def single_test(model, songurl, feat_dict, exps, args, filename_prefix=None):
 
         
         # temp_plot_a = plot_pred_against(output, testlabels[j])
-        a_axs[j].scatter(testlabels[j], output, marker='x')
+        # a_axs[j].scatter(testlabels[j], output, marker='x')
+        a_axs[j].scatter(testlabel_trimmed, output, marker='x')
         
 
     c_fig.suptitle(f'{songurl}')
@@ -501,10 +531,27 @@ if __name__ == "__main__":
     test_ave_mse, test_ave_r, sum_test  = test(model, test_loader)
 
     for songurl in util.testlist:
-        single_test(model, songurl, test_feat_dict, exps, args)
+        single_test(
+            model,
+            songurl,
+            test_feat_dict,
+            exps,
+            args,
+            age_mean,
+            age_std,
+        )
 
     for songurl in util.trainlist[0:5]:
-        single_test(model, songurl, train_feat_dict, exps, args, 'train')
+        single_test(
+            model,
+            songurl,
+            train_feat_dict,
+            exps,
+            args,
+            age_mean,
+            age_std,
+            filename_prefix="train_",
+        )
         
     # single_test(model, '0505_58', exps, args)
 
@@ -531,7 +578,10 @@ if __name__ == "__main__":
     exp_log_filepath = os.path.join(dir_path,'saved_models','experiment_log2.pkl')
     if os.path.exists(exp_log_filepath):
         exp_log = pd.read_pickle(exp_log_filepath)
-        exp_log = exp_log.append(args_df).reset_index(drop=True)
+        exp_log = pd.concat(
+            [exp_log, args_df],
+            ignore_index=True
+        )
         pd.to_pickle(exp_log, exp_log_filepath)
         print(exp_log)
     else:
