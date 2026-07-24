@@ -77,7 +77,7 @@ def train(train_loader, model, valid_loader, args):
     n_epochs_least = 100
     n_epochs_stop = 50
     epochs_no_improve = 0
-    min_val_loss = np.Inf
+    min_val_loss = np.inf
     early_stop = False
 
     for epoch in np.arange(args.num_epochs):
