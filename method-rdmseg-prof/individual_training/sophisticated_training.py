@@ -199,15 +199,15 @@ if __name__ == "__main__":
     parser.add_argument('--affect_type', type=str, default='arousals', help='Can be either "arousals" or "valences"')
     parser.add_argument('--num_epochs', type=int, default=2)
     parser.add_argument('--model_name', type=str, default='test', help='Name of folder plots and model will be saved in')
-    parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--num_workers', type=int, default=10)
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--hidden_dim', type=int, default=512)
     parser.add_argument('--num_timesteps', type=int, default=30)
     # parser.add_argument('--step_size', type=int, default=1)
     parser.add_argument('--lr', type=float, default=0.0001)
     # parser.add_argument('--mse_weight', type=float, default=1.0)
     # parser.add_argument('--r_weight', type=float, default=0.1)
-    parser.add_argument('--conditions', nargs='+', type=str, default=['age'])
+    parser.add_argument('--conditions', nargs='+', type=str, default=['instrument', 'training', 'duration'])
     
     
 
@@ -268,7 +268,15 @@ if __name__ == "__main__":
     # CUDA for PyTorch
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    torch.manual_seed(42)
+    import random
+
+    SEED = 42
+
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
     torch.backends.cudnn.benchmark = True
     print('cuda: ', use_cuda)
     print('device: ', device)
