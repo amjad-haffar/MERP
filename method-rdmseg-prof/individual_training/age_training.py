@@ -260,7 +260,15 @@ if __name__ == "__main__":
     # CUDA for PyTorch
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    torch.manual_seed(42)
+    import random
+
+    SEED = 42
+
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
     torch.backends.cudnn.benchmark = True
     print('cuda: ', use_cuda)
     print('device: ', device)

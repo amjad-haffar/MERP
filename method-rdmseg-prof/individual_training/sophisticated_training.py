@@ -117,6 +117,18 @@ def train(train_loader, model, test_loader, fold_i, args):
             epoch_loss_log['r'].append(loss_r.item())
 
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
+            # Evaluate every 10 epochs, including the final epoch
+            # Test every 10 epochs
+            if (epoch + 1) % 10 == 0:
+                test_ave_mse, test_ave_r = test(model, test_loader)
+
+                print(
+                    f'test loss || mse: {test_ave_mse:.4f} '
+                    f'|| r: {test_ave_r:.4f}'
+                )
+
+                loss_log['test_mse'].append(test_ave_mse)
+                loss_log['test_r'].append(test_ave_r)
             
         # log average loss
         aveloss_mse = np.average(epoch_loss_log['mse'])
@@ -128,8 +140,12 @@ def train(train_loader, model, test_loader, fold_i, args):
 
         epoch_duration = time.time() - start_time
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
-        
-    test_ave_mse, test_ave_r = test(model, test_loader)
+        if (epoch + 1) % 20 == 0:
+            test_ave_mse, test_ave_r = test(model, test_loader)
+            print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
+
+            loss_log['test_mse'].append(test_ave_mse)
+            loss_log['test_r'].append(test_ave_r)
     print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
 
     loss_log['test_mse'].append(test_ave_mse)
@@ -398,7 +414,6 @@ if __name__ == "__main__":
         print('check input_dim: ', input_dim)
         model = archi(input_dim=input_dim, hidden_dim=args.hidden_dim).to(device)
         model.float()
-        print(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         
