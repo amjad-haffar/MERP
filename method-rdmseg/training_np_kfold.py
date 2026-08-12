@@ -122,11 +122,10 @@ def train(train_loader, model, test_loader, fold_i, args):
         epoch_duration = time.time() - start_time
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
         
-
-        test_ave_mse, test_ave_r = test(model, test_loader)
-        print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
-        loss_log['test_mse'].append(test_ave_mse)
-        loss_log['test_r'].append(test_ave_r)
+    test_ave_mse, test_ave_r = test(model, test_loader)
+    print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
+    loss_log['test_mse'].append(test_ave_mse)
+    loss_log['test_r'].append(test_ave_r)
 
     return model, aveloss_mse, aveloss_r, test_ave_mse, test_ave_r
 
@@ -169,7 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir_path', type=str, default=dir_path)
     parser.add_argument('--linear', type=bool, default=False)
-    parser.add_argument('--plot', type=bool, default=True)
+    parser.add_argument('--plot', action='store_true')
     parser.add_argument('--master', type=int, default=1) # use int instead of boolean.
     parser.add_argument('--affect_type', type=str, default='valences', help='Can be either "arousals" or "valences"')
     parser.add_argument('--num_epochs', type=int, default=100)
@@ -231,7 +230,14 @@ if __name__ == "__main__":
     # CUDA for PyTorch
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    torch.manual_seed(42)
+    import random
+
+    SEED = 42
+
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
     torch.backends.cudnn.benchmark = True
     print('cuda: ', use_cuda)
     print('device: ', device)
