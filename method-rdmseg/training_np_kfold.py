@@ -128,27 +128,6 @@ def train(train_loader, model, test_loader, fold_i, args):
         loss_log['test_mse'].append(test_ave_mse)
         loss_log['test_r'].append(test_ave_r)
 
-    # plot loss against epochs
-    plt.plot(loss_log['train_mse'][1::], label='training loss mse')
-    plt.plot(loss_log['test_mse'], label='test loss mse')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    plt.legend()
-    # plt.ylim([0, 0.5])
-    plt.title(f"Loss || init mse:{loss_log['train_mse'][0]:.3f} | test mse: {test_ave_mse:.3f}")
-    plt.savefig(os.path.join(args.dir_path, 'saved_models', f'{args.model_name}', f'loss_plot_fold{fold_i}_mse.png'))
-    plt.close()
-
-    plt.plot(loss_log['train_r'][1::], label='training loss r')
-    plt.plot(loss_log['test_r'], label='test loss r')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    # plt.ylim([-1, 1])
-    plt.legend()
-    plt.title(f"Loss || init r:{loss_log['train_r'][0]:.3f} | test r: {test_ave_r:.3f}")
-    plt.savefig(os.path.join(args.dir_path, 'saved_models', f'{args.model_name}', f'loss_plot_fold{fold_i}_r.png'))
-    plt.close()
-
     return model, aveloss_mse, aveloss_r, test_ave_mse, test_ave_r
 
 ####################
