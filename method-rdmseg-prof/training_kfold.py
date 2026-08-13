@@ -336,9 +336,9 @@ if __name__ == "__main__":
 
     if os.path.exists(exp_log_filepath):
         exp_log = pd.read_pickle(exp_log_filepath)
-        exp_log = exp_log.append(args_df).reset_index(drop=True)
+        exp_log = pd.concat([exp_log, args_df], ignore_index=True)
         pd.to_pickle(exp_log, exp_log_filepath)
-        print(exp_log)
+        print(exp_log.to_string(index=False))
     else:
         pd.to_pickle(args_df, exp_log_filepath)
-        print(args_df)
+        print(args_df.to_string(index=False))
