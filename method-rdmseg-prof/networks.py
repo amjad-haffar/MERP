@@ -22,7 +22,7 @@ class lstm_double(torch.nn.Module):
 
         self.fc2 = nn.Linear(hidden_dim*2, 1)
 
-        self.dropout2 = nn.Dropout(0.2)
+        # self.dropout2 = nn.Dropout(0.2)
         self.actout = nn.Tanh()
         
         # smoothing gaussian kernel
@@ -41,9 +41,9 @@ class lstm_double(torch.nn.Module):
 
         lstm_out, _ = self.lstm2(lstm_out, lstm_c)
         
-        out = self.dropout2(lstm_out)
+        # out = self.dropout2(lstm_out)
 
-        out = self.fc2(out)
+        out = self.fc2(lstm_out)
         
         out = self.actout(out)
         # print('3 ', out.shape)
