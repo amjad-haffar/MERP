@@ -43,7 +43,7 @@ class lstm_double(torch.nn.Module):
         
         out = self.dropout2(lstm_out)
 
-        out = self.fc2(lstm_out)
+        out = self.fc2(out)
         
         out = self.actout(out)
         # print('3 ', out.shape)
