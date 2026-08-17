@@ -304,7 +304,7 @@ if __name__ == "__main__":
         model.float()
         print(model)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,weight_decay=1e-5)
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
