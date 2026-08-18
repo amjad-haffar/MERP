@@ -128,33 +128,24 @@ def train(train_loader, model, test_loader, fold_i, args):
 
         epoch_duration = time.time() - start_time
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
-        
-    test_ave_mse, test_ave_r = test(model, test_loader)
-    print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
+        if (epoch + 1) % 5 == 0:
+            test_ave_mse, test_ave_r = test(model, test_loader)
 
-    loss_log['test_mse'].append(test_ave_mse)
-    loss_log['test_r'].append(test_ave_r)
+            print(
+                f'Fold: {fold_i} || Epoch: {epoch:3} || '
+                f'test mse: {test_ave_mse:.4f} || '
+                f'test r: {test_ave_r:.4f}'
+            )
 
-    # plot loss against epochs
-    plt.plot(loss_log['train_mse'][1::], label='training loss mse')
-    plt.plot(loss_log['test_mse'], label='test loss mse')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    plt.legend()
-    # plt.ylim([0, 0.5])
-    plt.title(f"Loss || init mse:{loss_log['train_mse'][0]:.3f} | test mse: {test_ave_mse:.3f}")
-    plt.savefig(os.path.join(args.dir_path, save_models_foldername, f'{args.model_name}', f'loss_plot_fold{fold_i}_mse.png'))
-    plt.close()
+            loss_log['test_mse'].append(test_ave_mse)
+            loss_log['test_r'].append(test_ave_r)
 
-    plt.plot(loss_log['train_r'][1::], label='training loss r')
-    plt.plot(loss_log['test_r'], label='test loss r')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
-    # plt.ylim([-1, 1])
-    plt.legend()
-    plt.title(f"Loss || init r:{loss_log['train_r'][0]:.3f} | test r: {test_ave_r:.3f}")
-    plt.savefig(os.path.join(args.dir_path, save_models_foldername, f'{args.model_name}', f'loss_plot_fold{fold_i}_r.png'))
-    plt.close()
+            model.train()
+    # test_ave_mse, test_ave_r = test(model, test_loader)
+    # print(f'test loss || mse: {test_ave_mse:.4f} || r: {test_ave_r:.4f}')
+
+    # loss_log['test_mse'].append(test_ave_mse)
+    # loss_log['test_r'].append(test_ave_r)
 
     return model, aveloss_mse, aveloss_r, test_ave_mse, test_ave_r
 
