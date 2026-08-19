@@ -7,11 +7,11 @@ import pandas as pd
 
 ALL_FEATURES = [
     "age",
-    # "gender",
+    "gender",
     "residence",
     "enculturation",
     "language",
-    # "genre",
+    "genre",
     "instrument",
     "training",
     "duration",
