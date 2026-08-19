@@ -204,11 +204,11 @@ if __name__ == "__main__":
         type=str,
         default=[
             'age',
-            # 'gender',
+            'gender',
             'residence',
             'enculturation',
             'language',
-            # 'genre',
+            'genre',
             'instrument',
             'training',
             'duration',
