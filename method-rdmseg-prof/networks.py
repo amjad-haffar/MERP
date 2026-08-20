@@ -281,15 +281,20 @@ class lstm_double_late_fusion(torch.nn.Module):
 
         # Listener-profile branch
         self.profile_fc = nn.Linear(
-            profile_dim,
-            hidden_dim // 4
+        profile_dim,
+        hidden_dim // 4
         )
-
         self.profile_act = nn.LeakyReLU(0.1)
 
-        # Fusion/output
-        self.fc2 = nn.Linear(
+        self.fusion_fc = nn.Linear(
             hidden_dim * 2 + hidden_dim // 4,
+            hidden_dim // 2
+        )
+
+        self.fusion_act = nn.LeakyReLU(0.1)
+
+        self.fc_out = nn.Linear(
+            hidden_dim // 2,
             1
         )
 
@@ -323,13 +328,28 @@ class lstm_double_late_fusion(torch.nn.Module):
             dim=2
         )
 
-        out = self.fc2(combined)
+        out = self.fusion_fc(combined)
+        out = self.fusion_act(out)
+
+        out = self.fc_out(out)
         out = self.actout(out)
 
         out = out.flatten(1)
         out = out.unsqueeze(1)
 
         return out
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+            own_state[name].copy_(param)
     
 # class Three_FC_layer(torch.nn.Module):
 #     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
