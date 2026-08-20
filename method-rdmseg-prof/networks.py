@@ -260,11 +260,88 @@ class Three_FC_layer(torch.nn.Module):
 #                 param = param.data
 
 #             own_state[name].copy_(param)
+# class lstm_double_late_fusion(torch.nn.Module):
+#     def __init__(self, audio_dim, profile_dim, hidden_dim):
+#         super().__init__()
+
+#         # Audio branch
+#         self.lstm = nn.LSTM(
+#             audio_dim,
+#             hidden_dim,
+#             batch_first=True,
+#             bidirectional=True
+#         )
+
+#         self.lstm2 = nn.LSTM(
+#             hidden_dim * 2,
+#             hidden_dim,
+#             batch_first=True,
+#             bidirectional=True
+#         )
+
+#         # Listener-profile branch
+#         self.profile_fc = nn.Linear(
+#         profile_dim,
+#         hidden_dim // 4
+#         )
+#         self.profile_act = nn.LeakyReLU(0.1)
+
+#         self.fusion_fc = nn.Linear(
+#             hidden_dim * 2 + hidden_dim // 4,
+#             hidden_dim // 2
+#         )
+
+#         self.fusion_act = nn.LeakyReLU(0.1)
+
+#         self.fc_out = nn.Linear(
+#             hidden_dim // 2,
+#             1
+#         )
+
+#         self.actout = nn.Tanh()
+
+#     def forward(self, audio, profile):
+
+#         # Audio branch
+#         lstm_out, lstm_state = self.lstm(audio)
+
+#         lstm_out, _ = self.lstm2(
+#             lstm_out,
+#             lstm_state
+#         )
+
+#         # Profile branch
+#         profile_out = self.profile_fc(profile)
+#         profile_out = self.profile_act(profile_out)
+
+#         # Repeat learned listener representation
+#         # across prediction timesteps
+#         profile_out = profile_out.unsqueeze(1).expand(
+#             -1,
+#             lstm_out.size(1),
+#             -1
+#         )
+
+#         # Fusion
+#         combined = torch.cat(
+#             [lstm_out, profile_out],
+#             dim=2
+#         )
+
+#         out = self.fusion_fc(combined)
+#         out = self.fusion_act(out)
+
+#         out = self.fc_out(out)
+#         out = self.actout(out)
+
+#         out = out.flatten(1)
+#         out = out.unsqueeze(1)
+
+        # return out
 class lstm_double_late_fusion(torch.nn.Module):
     def __init__(self, audio_dim, profile_dim, hidden_dim):
         super().__init__()
 
-        # Audio branch
         self.lstm = nn.LSTM(
             audio_dim,
             hidden_dim,
@@ -279,22 +356,8 @@ class lstm_double_late_fusion(torch.nn.Module):
             bidirectional=True
         )
 
-        # Listener-profile branch
-        self.profile_fc = nn.Linear(
-        profile_dim,
-        hidden_dim // 4
-        )
-        self.profile_act = nn.LeakyReLU(0.1)
-
-        self.fusion_fc = nn.Linear(
-            hidden_dim * 2 + hidden_dim // 4,
-            hidden_dim // 2
-        )
-
-        self.fusion_act = nn.LeakyReLU(0.1)
-
-        self.fc_out = nn.Linear(
-            hidden_dim // 2,
+        self.fc2 = nn.Linear(
+            hidden_dim * 2 + profile_dim,
             1
         )
 
@@ -302,7 +365,6 @@ class lstm_double_late_fusion(torch.nn.Module):
 
     def forward(self, audio, profile):
 
-        # Audio branch
         lstm_out, lstm_state = self.lstm(audio)
 
         lstm_out, _ = self.lstm2(
@@ -310,28 +372,18 @@ class lstm_double_late_fusion(torch.nn.Module):
             lstm_state
         )
 
-        # Profile branch
-        profile_out = self.profile_fc(profile)
-        profile_out = self.profile_act(profile_out)
-
-        # Repeat learned listener representation
-        # across prediction timesteps
-        profile_out = profile_out.unsqueeze(1).expand(
+        profile = profile.unsqueeze(1).expand(
             -1,
             lstm_out.size(1),
             -1
         )
 
-        # Fusion
         combined = torch.cat(
-            [lstm_out, profile_out],
+            [lstm_out, profile],
             dim=2
         )
 
-        out = self.fusion_fc(combined)
-        out = self.fusion_act(out)
-
-        out = self.fc_out(out)
+        out = self.fc2(combined)
         out = self.actout(out)
 
         out = out.flatten(1)

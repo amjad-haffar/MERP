@@ -319,14 +319,21 @@ class Combination_model_2(torch.nn.Module):
 
         # print('combined.shape: ', combined.shape)
 
+        # c_1 = self.fc_c1(combined)
+        # hl_l = self.dropout3(hl_l)
+        # c_1 = self.lr3(c_1)
+
+        # c_2 = self.fc_c2(c_1)
+        # hl_l = self.dropout4(hl_l)
+        # c_2 = self.lr4(c_2)
+
         c_1 = self.fc_c1(combined)
-        hl_l = self.dropout3(hl_l)
+        c_1 = self.dropout3(c_1)
         c_1 = self.lr3(c_1)
 
         c_2 = self.fc_c2(c_1)
-        hl_l = self.dropout4(hl_l)
+        c_2 = self.dropout4(c_2)
         c_2 = self.lr4(c_2)
-
         c_3 = self.fc_c3(c_2)
 
         return c_3
