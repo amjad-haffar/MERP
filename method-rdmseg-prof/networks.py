@@ -194,6 +194,143 @@ class Three_FC_layer(torch.nn.Module):
                 param = param.data
             own_state[name].copy_(param)
 
+# class lstm_double_late_fusion(torch.nn.Module):
+#     def __init__(self, audio_dim, profile_dim, hidden_dim):
+#         super().__init__()
+
+#         self.lstm = nn.LSTM(
+#             audio_dim,
+#             hidden_dim,
+#             batch_first=True,
+#             bidirectional=True
+#         )
+
+#         self.lstm2 = nn.LSTM(
+#             hidden_dim * 2,
+#             hidden_dim,
+#             batch_first=True,
+#             bidirectional=True
+#         )
+
+#         self.fc2 = nn.Linear(
+#             hidden_dim * 2 + profile_dim,
+#             1
+#         )
+
+#         self.actout = nn.Tanh()
+
+#     def forward(self, audio, profile):
+
+#         lstm_out, lstm_state = self.lstm(audio)
+
+#         lstm_out, _ = self.lstm2(
+#             lstm_out,
+#             lstm_state
+#         )
+
+#         # profile: [batch, profile_dim]
+#         # repeat it across the dynamic timesteps
+#         profile = profile.unsqueeze(1).expand(
+#             -1,
+#             lstm_out.size(1),
+#             -1
+#         )
+
+#         combined = torch.cat(
+#             [lstm_out, profile],
+#             dim=2
+#         )
+
+#         out = self.fc2(combined)
+#         out = self.actout(out)
+
+#         out = out.flatten(1)
+#         out = out.unsqueeze(1)
+
+#         return out
+#     def load_my_state_dict(self, state_dict):
+
+#         own_state = self.state_dict()
+
+#         for name, param in state_dict.items():
+#             if name not in own_state:
+#                 continue
+
+#             if isinstance(param, nn.Parameter):
+#                 param = param.data
+
+#             own_state[name].copy_(param)
+class lstm_double_late_fusion(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
+        super().__init__()
+
+        # Audio branch
+        self.lstm = nn.LSTM(
+            audio_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        # Listener-profile branch
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            hidden_dim // 4
+        )
+
+        self.profile_act = nn.LeakyReLU(0.1)
+
+        # Fusion/output
+        self.fc2 = nn.Linear(
+            hidden_dim * 2 + hidden_dim // 4,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+    def forward(self, audio, profile):
+
+        # Audio branch
+        lstm_out, lstm_state = self.lstm(audio)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+        # Profile branch
+        profile_out = self.profile_fc(profile)
+        profile_out = self.profile_act(profile_out)
+
+        # Repeat learned listener representation
+        # across prediction timesteps
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            lstm_out.size(1),
+            -1
+        )
+
+        # Fusion
+        combined = torch.cat(
+            [lstm_out, profile_out],
+            dim=2
+        )
+
+        out = self.fc2(combined)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+    
 # class Three_FC_layer(torch.nn.Module):
 #     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
 #     # def __init__(self, input_dim = 1582, reduced_dim=128, fc_dim = 64):
