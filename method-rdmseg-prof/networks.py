@@ -298,6 +298,8 @@ class lstm_double_late_profile_branch(torch.nn.Module):
             128,
             1
         )
+        self.profile_dropout = nn.Dropout(0.2)
+        self.fusion_dropout = nn.Dropout(0.2)
 
         self.actout = nn.Tanh()
 
@@ -308,6 +310,7 @@ class lstm_double_late_profile_branch(torch.nn.Module):
 
         profile_out = self.profile_fc(profile)
         profile_out = self.profile_act(profile_out)
+        profile_out = self.profile_dropout(profile_out)
 
         profile_out = profile_out.unsqueeze(1).expand(
             -1,
@@ -322,6 +325,7 @@ class lstm_double_late_profile_branch(torch.nn.Module):
 
         out = self.fusion_fc(combined)
         out = self.fusion_act(out)
+        out = self.fusion_dropout(out)
 
         out = self.fc_out(out)
         out = self.actout(out)
