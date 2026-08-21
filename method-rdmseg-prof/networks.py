@@ -350,6 +350,134 @@ class lstm_double_late_profile_branch(torch.nn.Module):
 
             own_state[name].copy_(param)
     
+class lstm_double_late_middle(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
+        super().__init__()
+
+        # =====================================================
+        # AUDIO BRANCH
+        # =====================================================
+
+        self.lstm = nn.LSTM(
+            audio_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+
+        # =====================================================
+        # PROFILE BRANCH
+        # 9 profile features -> compact learned representation
+        # =====================================================
+
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            32
+        )
+
+        self.profile_act = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # DIRECT FUSION -> OUTPUT
+        #
+        # NO extra fusion hidden layer here.
+        # =====================================================
+
+        self.fc_out = nn.Linear(
+            hidden_dim * 2 + 32,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, audio, profile):
+
+        # =====================================================
+        # AUDIO
+        # =====================================================
+
+        lstm_out, lstm_state = self.lstm(audio)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+
+        # =====================================================
+        # PROFILE
+        # profile: [batch, 9]
+        # -> [batch, 32]
+        # =====================================================
+
+        profile_out = self.profile_fc(profile)
+        profile_out = self.profile_act(profile_out)
+
+
+        # Repeat static listener representation
+        # across the 30 emotion timesteps
+        #
+        # [batch, 32]
+        # ->
+        # [batch, 30, 32]
+
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            lstm_out.size(1),
+            -1
+        )
+
+
+        # =====================================================
+        # FUSION
+        # =====================================================
+
+        combined = torch.cat(
+            [lstm_out, profile_out],
+            dim=2
+        )
+
+
+        # DIRECTLY predict from combined representation
+        out = self.fc_out(combined)
+
+        out = self.actout(out)
+
+
+        # Match existing MERP output shape
+        # [batch, 30, 1]
+        # ->
+        # [batch, 1, 30]
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+
+
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+            own_state[name].copy_(param)
 # class Three_FC_layer(torch.nn.Module):
 #     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
 #     # def __init__(self, input_dim = 1582, reduced_dim=128, fc_dim = 64):
