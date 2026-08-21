@@ -352,16 +352,11 @@ class lstm_double_late_profile_branch(torch.nn.Module):
 
             own_state[name].copy_(param)
 
-class lstm_double_middle_profile_branch(torch.nn.Module):
-
-    def __init__(
-        self,
-        audio_dim,
-        profile_dim,
-        hidden_dim
-    ):
+class lstm_double_profile_branch(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
         super().__init__()
 
+        # Audio branch: unchanged
         self.lstm = nn.LSTM(
             audio_dim,
             hidden_dim,
@@ -369,34 +364,38 @@ class lstm_double_middle_profile_branch(torch.nn.Module):
             bidirectional=True
         )
 
-
-        self.profile_fc = nn.Linear(
-            profile_dim,
-            hidden_dim // 4
-        )
-
-        self.profile_act = nn.LeakyReLU(0.1)
-
         self.lstm2 = nn.LSTM(
-            hidden_dim * 2 + hidden_dim // 4,
+            hidden_dim * 2,
             hidden_dim,
             batch_first=True,
             bidirectional=True
         )
 
+        # Small profile branch
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            32
+        )
+        self.profile_act = nn.LeakyReLU(0.1)
+
+        # Smaller fusion layer
+        self.fusion_fc = nn.Linear(
+            hidden_dim * 2 + 32,
+            128
+        )
+        self.fusion_act = nn.LeakyReLU(0.1)
 
         self.fc_out = nn.Linear(
-            hidden_dim * 2,
+            128,
             1
         )
 
         self.actout = nn.Tanh()
 
-
     def forward(self, audio, profile):
 
-        lstm_out, _ = self.lstm(audio)
-
+        lstm_out, lstm_state = self.lstm(audio)
+        lstm_out, _ = self.lstm2(lstm_out, lstm_state)
 
         profile_out = self.profile_fc(profile)
         profile_out = self.profile_act(profile_out)
@@ -407,23 +406,15 @@ class lstm_double_middle_profile_branch(torch.nn.Module):
             -1
         )
 
-        # ----------------------------------------------------
-        # MIDDLE FUSION
-        # ----------------------------------------------------
-
         combined = torch.cat(
             [lstm_out, profile_out],
             dim=2
         )
 
-        # Second LSTM learns audio + listener interaction
-        lstm_out, _ = self.lstm2(combined)
+        out = self.fusion_fc(combined)
+        out = self.fusion_act(out)
 
-        # ----------------------------------------------------
-        # OUTPUT
-        # ----------------------------------------------------
-
-        out = self.fc_out(lstm_out)
+        out = self.fc_out(out)
         out = self.actout(out)
 
         out = out.flatten(1)
