@@ -298,8 +298,8 @@ class lstm_double_late_profile_branch(torch.nn.Module):
             128,
             1
         )
-        self.profile_dropout = nn.Dropout(0.2)
-        self.fusion_dropout = nn.Dropout(0.2)
+        self.profile_dropout = nn.Dropout(0.4)
+        self.fusion_dropout = nn.Dropout(0.4)
 
         self.actout = nn.Tanh()
 
