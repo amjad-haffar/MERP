@@ -980,7 +980,7 @@ class Three_FC_profile_branch(torch.nn.Module):
         )
 
         out = self.fusion_fc(combined)
-        out = self.fusion_dropout(out)
+        # out = self.fusion_dropout(out)
         out = self.fusion_act(out)
 
         out = self.fc_out(out)
