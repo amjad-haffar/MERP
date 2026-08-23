@@ -884,29 +884,115 @@ class lstm_double_profile_attention(torch.nn.Module):
                 param = param.data
 
             own_state[name].copy_(param)
-# class Three_FC_layer(torch.nn.Module):
-#     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
-#     # def __init__(self, input_dim = 1582, reduced_dim=128, fc_dim = 64):
-#         super(Three_FC_layer, self).__init__()
-#         # self.reduce_dim = nn.Linear(input_dim, reduced_dim, bias=False)
 
-#         self.fc1 = nn.Linear(reduced_dim, fc_dim, bias=False)
-#         self.dropout1 = nn.Dropout(0.5)
-#         self.lr1 = nn.LeakyReLU(0.1)
-#         self.fc2 = nn.Linear(fc_dim, fc_dim, bias=False)
-#         self.dropout2 = nn.Dropout(0.5)
-#         self.lr2 = nn.LeakyReLU(0.1)
-#         self.fc_out = nn.Linear(fc_dim, out_features=1, bias=False)  # output
+class Three_FC_profile_branch(torch.nn.Module):
+    def __init__(
+        self,
+        audio_dim,
+        profile_dim,
+        hidden_dim=128
+    ):
+        super().__init__()
 
-#     def forward(self, x):
-#         # out = self.class_dim(self.lr2(self.dropout2(self.fc2(self.lr1(self.dropout1(self.fc1(self.reduced_rgb(x))))))))
-#         # out = self.reduce_dim(x)
-#         out = self.fc1(x)
-#         out = self.dropout1(out)
-#         out = self.lr1(out)
-#         out = self.fc2(out)
-#         out = self.dropout2(out)
-#         out = self.lr2(out)
-#         out = self.fc_out(out)
-        
-#         return out
+        # -----------------------------
+        # Audio branch
+        # -----------------------------
+        self.audio_fc1 = nn.Linear(
+            audio_dim,
+            hidden_dim
+        )
+        self.audio_dropout1 = nn.Dropout(0.5)
+        self.audio_act1 = nn.LeakyReLU(0.1)
+
+        self.audio_fc2 = nn.Linear(
+            hidden_dim,
+            hidden_dim // 2
+        )
+        self.audio_dropout2 = nn.Dropout(0.5)
+        self.audio_act2 = nn.LeakyReLU(0.1)
+
+        # -----------------------------
+        # Profile branch
+        # -----------------------------
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            32
+        )
+        self.profile_act = nn.LeakyReLU(0.1)
+
+        # -----------------------------
+        # Fusion
+        # audio 64 + profile 32 = 96
+        # -----------------------------
+        self.fusion_fc = nn.Linear(
+            hidden_dim // 2 + 32,
+            hidden_dim // 2
+        )
+        self.fusion_dropout = nn.Dropout(0.4)
+        self.fusion_act = nn.LeakyReLU(0.1)
+
+        self.fc_out = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+        kernel = torch.FloatTensor([[
+            [0.0099, 0.0301, 0.0587,
+             0.0733,
+             0.0587, 0.0301, 0.0099]
+        ]])
+
+        self.register_buffer(
+            'kernel',
+            kernel
+        )
+
+    def forward(self, audio, profile):
+
+        # Audio representation
+        audio_out = self.audio_fc1(audio)
+        audio_out = self.audio_dropout1(audio_out)
+        audio_out = self.audio_act1(audio_out)
+
+        audio_out = self.audio_fc2(audio_out)
+        audio_out = self.audio_dropout2(audio_out)
+        audio_out = self.audio_act2(audio_out)
+
+        # Profile representation
+        profile_out = self.profile_fc(profile)
+        profile_out = self.profile_act(profile_out)
+
+        # If profile is [B, profile_dim]
+        # and audio is [B, T, audio_dim],
+        # repeat profile across timesteps
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            audio_out.size(1),
+            -1
+        )
+
+        # Fuse
+        combined = torch.cat(
+            [audio_out, profile_out],
+            dim=2
+        )
+
+        out = self.fusion_fc(combined)
+        out = self.fusion_dropout(out)
+        out = self.fusion_act(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        out = F.conv1d(
+            out,
+            self.kernel,
+            padding=3
+        )
+
+        return out
