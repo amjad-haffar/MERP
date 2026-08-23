@@ -28,7 +28,9 @@ from testing_kfold import single_test, plot_pred_n_gts
 from dataset import rdm_dataset as dataset_class
 
 # from networks import lstm_double as archi_lstm
-from networks import Three_FC_layer as archi_linear
+# from networks import Three_FC_layer as archi_linear
+
+from networks import Three_FC_profile_branch as archi_linear
 from networks import lstm_double_late_profile_branch as late_fusion_branch
 from networks import lstm_double_adaptive_gating as late_fusion_gating
 from networks import lstm_double_profile_attention as late_fusion_attention

@@ -27,8 +27,11 @@ from testing_kfold import single_test, plot_pred_n_gts
 ### to edit accordingly.
 from dataset import rdm_dataset as dataset_class
 
-from networks import lstm_double as archi_lstm
-from networks import Three_FC_layer as archi_linear
+# from networks import lstm_double as archi_lstm
+from networks import Three_FC_profile_branch as archi_linear
+from networks import lstm_double_late_profile_branch as late_fusion_branch
+from networks import lstm_double_adaptive_gating as late_fusion_gating
+from networks import lstm_double_profile_attention as late_fusion_attention
 
 
 #####################
@@ -53,7 +56,31 @@ def train(train_loader, model, test_loader, fold_i, args):
         for batchidx, (feature, label) in enumerate(train_loader):
             numbatches = len(train_loader)
             # Transfer to GPU
-            feature, label = feature.to(device).float(), label.to(device).float()
+            ##### feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
+
+            # Separate audio from listener profile
+            audio = feature[:, :, :audio_dim]
+
+            # Profile is static and repeated across timesteps,
+            # so take one copy only.
+            profile = feature[:, 0, audio_dim:]
+            if fold_i == 0 and batchidx == 0:
+                print("SANITY CHECK")
+                print("Full feature shape:", feature.shape)
+                print("Audio shape:", audio.shape)
+                print("Profile shape:", profile.shape)
+                print("Label shape:", label.shape)
+
+                print(
+                    "Profile repeated across timesteps:",
+                    torch.allclose(
+                        feature[:, 0, audio_dim:],
+                        feature[:, 1, audio_dim:]
+                    )
+                )
+
             # clear gradients 
             optimizer.zero_grad()
             # forward pass
@@ -83,16 +110,22 @@ def train(train_loader, model, test_loader, fold_i, args):
         epoch_loss_log = {'mse' : [],'r' : []}
 
         for batchidx, (feature, label) in enumerate(train_loader):
-            
             numbatches = len(train_loader)
             # Transfer to GPU
-            feature, label = feature.to(device).float(), label.to(device).float()
+            # feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
+
+            audio = feature[:, :, :audio_dim]
+            profile = feature[:, 0, audio_dim:]
+
             # print(feature.shape)
             # print('label: ', label)
             # clear gradients 
             optimizer.zero_grad()
             # forward pass
-            output = model.forward(feature)
+            output = model(audio, profile)
+            # output = model.forward(feature)
             # print('out: ', output)
 
             output = output.squeeze(1)
@@ -158,10 +191,20 @@ def test(model, test_loader):
     losses = {'mse' : [], 'r' : []}
     with torch.no_grad():
         for feature, label in test_loader:
-            feature, label = feature.to(device).float(), label.to(device).float()
+            #######feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
 
+            # Separate audio from listener profile
+            audio = feature[:, :, :audio_dim]
+
+            # Profile is static and repeated across timesteps,
+            # so take one copy only.
+            profile = feature[:, 0, audio_dim:]
+
+            output = model(audio, profile)
             # forward pass
-            output = model(feature)
+            #######output = model(feature)
             output = output.squeeze(1)
 
             # loss
@@ -216,7 +259,7 @@ if __name__ == "__main__":
     else:
         setattr(args, 'model_name', f'{args.affect_type[0]}_p_{args.model_name}')
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_lstm.pkl')
-        archi = archi_lstm
+        archi = late_fusion_gating
     print(args)
 
     # check if folder with same model_name exists. if not, create folder.
@@ -352,8 +395,17 @@ if __name__ == "__main__":
 
         ## MODEL
         input_dim = list(train_feat_dict.values())[0].shape[1] + len(args.conditions) #724 # 1582 
-        print('check input_dim: ', input_dim)
-        model = archi(input_dim=input_dim, hidden_dim=args.hidden_dim).to(device)
+        audio_dim = 260
+        profile_dim = input_dim - audio_dim
+        print("audio_dim:", audio_dim)
+        print("profile_dim:", profile_dim)
+        print("total:", input_dim)
+        assert profile_dim == len(args.conditions), (
+            f"profile_dim={profile_dim}, "
+            f"but conditions={len(args.conditions)}"
+        )
+        # model = archi(input_dim=input_dim, hidden_dim=args.hidden_dim).to(device)
+        model = archi(audio_dim=audio_dim,profile_dim=profile_dim, hidden_dim=args.hidden_dim,).to(device)
         model.float()
         print(model)
 
@@ -378,11 +430,11 @@ if __name__ == "__main__":
         # test_ave_mse, test_ave_r, sum_test  = test(model, test_loader)
 
         # plot the predictions and ground truths
-        if args.plot:
-            for songurl in test_feat_dict.keys():
-                _,_, pred_n_gts = single_test(model, device, songurl, test_feat_dict, exps)
-                # print('whats going on: ', pred_n_gts)
-                plot_pred_n_gts(pred_n_gts, songurl, args, savepath, filename_prefix=fold_i)
+        # if args.plot:
+        #     for songurl in test_feat_dict.keys():
+        #         _,_, pred_n_gts = single_test(model, device, songurl, test_feat_dict, exps)
+        #         # print('whats going on: ', pred_n_gts)
+        #         plot_pred_n_gts(pred_n_gts, songurl, args, savepath, filename_prefix=fold_i)
 
     # logging
     args_dict = vars(args)
