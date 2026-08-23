@@ -478,6 +478,189 @@ class lstm_double_late_middle(torch.nn.Module):
                 param = param.data
 
             own_state[name].copy_(param)
+
+class lstm_double_adaptive_gating(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
+        super().__init__()
+
+        # =====================================================
+        # AUDIO BRANCH
+        # =====================================================
+
+        self.lstm = nn.LSTM(
+            audio_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        # Project audio representation into common fusion space
+        self.audio_fc = nn.Linear(
+            hidden_dim * 2,
+            128
+        )
+
+        self.audio_act = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # PROFILE BRANCH
+        # =====================================================
+
+        self.profile_fc1 = nn.Linear(
+            profile_dim,
+            32
+        )
+
+        self.profile_act1 = nn.LeakyReLU(0.1)
+
+        # Bring profile into SAME dimension as audio
+        self.profile_fc2 = nn.Linear(
+            32,
+            128
+        )
+
+        self.profile_act2 = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # ADAPTIVE GATE
+        #
+        # Input:
+        # audio 128 + profile 128 = 256
+        #
+        # Output:
+        # 2 weights:
+        # [audio weight, profile weight]
+        # =====================================================
+
+        self.gate_fc = nn.Linear(
+            128 * 2,
+            2
+        )
+
+
+        # =====================================================
+        # REGULARISATION + OUTPUT
+        # =====================================================
+
+        self.dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            128,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, audio, profile):
+
+        # =====================================================
+        # AUDIO
+        # =====================================================
+
+        lstm_out, lstm_state = self.lstm(audio)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+        audio_out = self.audio_fc(lstm_out)
+        audio_out = self.audio_act(audio_out)
+
+        # [batch, timesteps, 128]
+
+
+        # =====================================================
+        # PROFILE
+        # =====================================================
+
+        profile_out = self.profile_fc1(profile)
+        profile_out = self.profile_act1(profile_out)
+
+        profile_out = self.profile_fc2(profile_out)
+        profile_out = self.profile_act2(profile_out)
+
+        # [batch, 128]
+
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            audio_out.size(1),
+            -1
+        )
+
+        # [batch, timesteps, 128]
+
+
+        # =====================================================
+        # ADAPTIVE GATING
+        # =====================================================
+
+        gate_input = torch.cat(
+            [audio_out, profile_out],
+            dim=2
+        )
+
+        gate_logits = self.gate_fc(gate_input)
+
+        # Force weights to sum to 1
+        gate_weights = torch.softmax(
+            gate_logits,
+            dim=2
+        )
+
+        audio_weight = gate_weights[:, :, 0:1]
+        profile_weight = gate_weights[:, :, 1:2]
+
+
+        # =====================================================
+        # WEIGHTED FUSION
+        # =====================================================
+
+        fused = (
+            audio_weight * audio_out
+            +
+            profile_weight * profile_out
+        )
+
+        fused = self.dropout(fused)
+
+
+        # =====================================================
+        # PREDICTION
+        # =====================================================
+
+        out = self.fc_out(fused)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+
+
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+            own_state[name].copy_(param)
 # class Three_FC_layer(torch.nn.Module):
 #     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
 #     # def __init__(self, input_dim = 1582, reduced_dim=128, fc_dim = 64):
