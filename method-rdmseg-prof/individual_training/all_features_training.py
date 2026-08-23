@@ -153,7 +153,7 @@ def train(train_loader, model, test_loader, fold_i, args):
             epoch_loss_log['r'].append(loss_r.item())
 
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
-        scheduler.step()
+        # scheduler.step()
         # log average loss
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
@@ -461,11 +461,11 @@ if __name__ == "__main__":
         model.float()
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer,
-            milestones=[15, 30, 60],
-            gamma=0.5
-        )
+        # scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        #     optimizer,
+        #     milestones=[15, 30, 60],
+        #     gamma=0.5
+        # )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
