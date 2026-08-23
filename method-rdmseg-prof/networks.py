@@ -194,6 +194,78 @@ class Three_FC_layer(torch.nn.Module):
                 param = param.data
             own_state[name].copy_(param)
 
+class lstm_double_audio_matched(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        # Match the representation size used in the personalized model
+        self.audio_fc = nn.Linear(
+            hidden_dim * 2,
+            128
+        )
+
+        self.audio_act = nn.LeakyReLU(0.1)
+
+        # Same regularisation strength
+        self.dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            128,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, x):
+
+        lstm_out, lstm_state = self.lstm(x)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+        out = self.audio_fc(lstm_out)
+        out = self.audio_act(out)
+
+        out = self.dropout(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+
+
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+            own_state[name].copy_(param)
 class lstm_double_late_simple(torch.nn.Module):
     def __init__(self, audio_dim, profile_dim, hidden_dim):
         super().__init__()
