@@ -661,6 +661,157 @@ class lstm_double_adaptive_gating(torch.nn.Module):
                 param = param.data
 
             own_state[name].copy_(param)
+
+class lstm_double_profile_attention(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
+        super().__init__()
+
+        # =====================================================
+        # AUDIO BRANCH
+        # =====================================================
+
+        self.lstm = nn.LSTM(
+            audio_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+
+        # =====================================================
+        # PROFILE BRANCH
+        # raw profile -> compact learned representation
+        # =====================================================
+
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            32
+        )
+
+        self.profile_act = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # PROFILE ATTENTION
+        #
+        # Learns a weight for each of the 32 profile dimensions
+        # =====================================================
+
+        self.profile_attention = nn.Linear(
+            32,
+            32
+        )
+
+
+        # =====================================================
+        # FUSION
+        # =====================================================
+
+        self.fusion_fc = nn.Linear(
+            hidden_dim * 2 + 32,
+            128
+        )
+
+        self.fusion_act = nn.LeakyReLU(0.1)
+
+        self.dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            128,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, audio, profile):
+
+        # =====================================================
+        # AUDIO
+        # =====================================================
+
+        lstm_out, lstm_state = self.lstm(audio)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+
+        # =====================================================
+        # PROFILE REPRESENTATION
+        # =====================================================
+
+        profile_out = self.profile_fc(profile)
+        profile_out = self.profile_act(profile_out)
+
+
+        # =====================================================
+        # PROFILE ATTENTION
+        #
+        # sigmoid gives each profile dimension a weight 0..1
+        # =====================================================
+
+        attention_weights = torch.sigmoid(
+            self.profile_attention(profile_out)
+        )
+
+        attended_profile = (
+            profile_out * attention_weights
+        )
+
+
+        # Repeat static listener representation
+        # across dynamic timesteps
+        attended_profile = attended_profile.unsqueeze(1).expand(
+            -1,
+            lstm_out.size(1),
+            -1
+        )
+
+
+        # =====================================================
+        # FUSION
+        # =====================================================
+
+        combined = torch.cat(
+            [lstm_out, attended_profile],
+            dim=2
+        )
+
+        out = self.fusion_fc(combined)
+        out = self.fusion_act(out)
+        out = self.dropout(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+
+
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+            own_state[name].copy_(param)
 # class Three_FC_layer(torch.nn.Module):
 #     def __init__(self, input_dim = 261, reduced_dim=512, fc_dim = 64):
 #     # def __init__(self, input_dim = 1582, reduced_dim=128, fc_dim = 64):

@@ -31,6 +31,7 @@ from dataset import rdm_dataset as dataset_class
 from networks import Three_FC_layer as archi_linear
 from networks import lstm_double_late_profile_branch as late_fusion_branch
 from networks import lstm_double_adaptive_gating as late_fusion_gating
+from networks import lstm_double_profile_attention as late_fusion_attention
 # from networks import lstm_double_late_middle as late_fusion_middle
 # from networks import lstm_double_late_simple as late_fusion_simple
 
@@ -277,7 +278,7 @@ if __name__ == "__main__":
     else:
         setattr(args, 'model_name', f'{args.affect_type[0]}_p_{args.model_name}')
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_lstm.pkl')
-        archi = late_fusion_gating
+        archi = late_fusion_attention
     print(args)
 
     # check if folder with same model_name exists. if not, create folder.
