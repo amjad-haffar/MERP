@@ -928,7 +928,7 @@ class Three_FC_profile_branch(torch.nn.Module):
             hidden_dim // 2 + 32,
             hidden_dim // 2
         )
-        self.fusion_dropout = nn.Dropout(0.4)
+        # self.fusion_dropout = nn.Dropout(0.1)
         self.fusion_act = nn.LeakyReLU(0.1)
 
         self.fc_out = nn.Linear(
