@@ -901,14 +901,14 @@ class Three_FC_profile_branch(torch.nn.Module):
             audio_dim,
             hidden_dim
         )
-        self.audio_dropout1 = nn.Dropout(0.5)
+        self.audio_dropout1 = nn.Dropout(0.2)
         self.audio_act1 = nn.LeakyReLU(0.1)
 
         self.audio_fc2 = nn.Linear(
             hidden_dim,
             hidden_dim // 2
         )
-        self.audio_dropout2 = nn.Dropout(0.5)
+        self.audio_dropout2 = nn.Dropout(0.2)
         self.audio_act2 = nn.LeakyReLU(0.1)
 
         # -----------------------------
