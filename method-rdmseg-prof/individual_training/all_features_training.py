@@ -31,7 +31,7 @@ from dataset import rdm_dataset as dataset_class
 from networks import Three_FC_profile_branch as archi_linear
 from networks import lstm_double_late_profile_branch as late_fusion_branch
 from networks import lstm_double_adaptive_gating as late_fusion_gating
-from networks import lstm_double_profile_attention as late_fusion_attention
+from networks import lstm_double_profile_attention_improved as late_fusion_attention
 # from networks import lstm_double_late_middle as late_fusion_middle
 # from networks import lstm_double_late_simple as late_fusion_simple
 

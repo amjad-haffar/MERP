@@ -996,3 +996,126 @@ class Three_FC_profile_branch(torch.nn.Module):
         )
 
         return out
+class lstm_double_profile_attention_improved(torch.nn.Module):
+    def __init__(self, audio_dim, profile_dim, hidden_dim):
+        super().__init__()
+
+        # =====================================================
+        # AUDIO BRANCH
+        # =====================================================
+
+        self.lstm = nn.LSTM(
+            audio_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        # =====================================================
+        # PROFILE FEATURE ATTENTION
+        # One learned weight for each ORIGINAL profile feature
+        # =====================================================
+
+        self.profile_attention = nn.Linear(
+            profile_dim,
+            profile_dim
+        )
+
+        # Profile representation after attention
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            32
+        )
+
+        self.profile_act = nn.LeakyReLU(0.1)
+
+        # =====================================================
+        # FUSION
+        # =====================================================
+
+        self.fusion_fc = nn.Linear(
+            hidden_dim * 2 + 32,
+            128
+        )
+
+        self.fusion_act = nn.LeakyReLU(0.1)
+
+        self.dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            128,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, audio, profile):
+
+        # =====================================================
+        # AUDIO
+        # =====================================================
+
+        lstm_out, lstm_state = self.lstm(audio)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+        # =====================================================
+        # LISTENER FEATURE ATTENTION
+        # =====================================================
+
+        attention_weights = torch.sigmoid(
+            self.profile_attention(profile)
+        )
+
+        attended_profile = (
+            profile * attention_weights
+        )
+
+        # Learn compact listener representation
+        profile_out = self.profile_fc(
+            attended_profile
+        )
+
+        profile_out = self.profile_act(
+            profile_out
+        )
+
+        # Static listener representation repeated across
+        # prediction timesteps
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            lstm_out.size(1),
+            -1
+        )
+
+        # =====================================================
+        # FUSION
+        # =====================================================
+
+        combined = torch.cat(
+            [lstm_out, profile_out],
+            dim=2
+        )
+
+        out = self.fusion_fc(combined)
+        out = self.fusion_act(out)
+        out = self.dropout(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
