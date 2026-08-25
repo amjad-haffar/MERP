@@ -464,7 +464,7 @@ if __name__ == "__main__":
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
-            milestones=[15, 30, 60],
+            milestones=[50, 65, 85],
             gamma=0.5
         )
         
