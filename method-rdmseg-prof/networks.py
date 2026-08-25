@@ -578,7 +578,7 @@ class lstm_double_adaptive_gating(torch.nn.Module):
             hidden_dim * 2,
             128
         )
-        self.audio_dropout = nn.Dropout(0.3)
+        # self.audio_dropout = nn.Dropout(0.3)
         self.audio_act = nn.LeakyReLU(0.1)
 
 
@@ -646,9 +646,9 @@ class lstm_double_adaptive_gating(torch.nn.Module):
             lstm_state
         )
         
-        audio_out = self.audio_dropout(lstm_out)
+        # audio_out = self.audio_dropout(lstm_out)
 
-        audio_out = self.audio_fc(audio_out)
+        audio_out = self.audio_fc(lstm_out)
         audio_out = self.audio_act(audio_out)
 
         # [batch, timesteps, 128]
