@@ -623,7 +623,7 @@ class lstm_double_adaptive_gating(torch.nn.Module):
         # REGULARISATION + OUTPUT
         # =====================================================
 
-        self.dropout = nn.Dropout(0.4)
+        self.dropout = nn.Dropout(0.5)
 
         self.fc_out = nn.Linear(
             128,

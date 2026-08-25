@@ -461,12 +461,7 @@ if __name__ == "__main__":
         model = archi(audio_dim=audio_dim,profile_dim=profile_dim, hidden_dim=args.hidden_dim,).to(device)
         model.float()
 
-        optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=args.lr,
-            weight_decay=1e-4
-        )
-        print("optimizer",optimizer)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         # scheduler = torch.optim.lr_scheduler.MultiStepLR(
         #     optimizer,
         #     milestones=[15, 30, 60],
