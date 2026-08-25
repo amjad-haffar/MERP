@@ -466,6 +466,7 @@ if __name__ == "__main__":
             lr=args.lr,
             weight_decay=1e-4
         )
+        print("optimizer",optimizer)
         # scheduler = torch.optim.lr_scheduler.MultiStepLR(
         #     optimizer,
         #     milestones=[15, 30, 60],
