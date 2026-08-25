@@ -888,6 +888,7 @@ class lstm_double_profile_attention(torch.nn.Module):
             own_state[name].copy_(param)
 
 class Three_FC_profile_branch(torch.nn.Module):
+
     def __init__(
         self,
         audio_dim,
@@ -991,6 +992,191 @@ class Three_FC_profile_branch(torch.nn.Module):
         out = out.flatten(1)
         out = out.unsqueeze(1)
 
+        out = F.conv1d(
+            out,
+            self.kernel,
+            padding=3
+        )
+
+        return out
+
+class Three_FC_profile_gated(torch.nn.Module):
+    def __init__(
+        self,
+        audio_dim,
+        profile_dim,
+        hidden_dim=128
+    ):
+        super().__init__()
+
+        # =====================================================
+        # AUDIO BRANCH
+        # =====================================================
+
+        self.audio_fc1 = nn.Linear(
+            audio_dim,
+            hidden_dim
+        )
+
+        self.audio_dropout1 = nn.Dropout(0.2)
+        self.audio_act1 = nn.LeakyReLU(0.1)
+
+        self.audio_fc2 = nn.Linear(
+            hidden_dim,
+            hidden_dim // 2
+        )
+
+        self.audio_dropout2 = nn.Dropout(0.2)
+        self.audio_act2 = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # PROFILE BRANCH
+        #
+        # Project listener information into the same
+        # dimensionality as the audio representation.
+        # =====================================================
+
+        self.profile_fc = nn.Linear(
+            profile_dim,
+            hidden_dim // 2
+        )
+
+        self.profile_act = nn.LeakyReLU(0.1)
+
+
+        # =====================================================
+        # ADAPTIVE GATING
+        #
+        # One learned scalar importance score for each stream.
+        # =====================================================
+
+        self.audio_gate = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+        self.profile_gate = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+
+        # =====================================================
+        # OUTPUT
+        # =====================================================
+
+        self.fusion_dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+        # =====================================================
+        # FIXED GAUSSIAN SMOOTHING
+        # =====================================================
+
+        kernel = torch.FloatTensor([[
+            [0.0099, 0.0301, 0.0587,
+             0.0733,
+             0.0587, 0.0301, 0.0099]
+        ]])
+
+        self.register_buffer(
+            "kernel",
+            kernel
+        )
+
+
+    def forward(self, audio, profile):
+
+        # =====================================================
+        # AUDIO REPRESENTATION
+        # audio: [B, T, audio_dim]
+        # =====================================================
+
+        audio_out = self.audio_fc1(audio)
+        audio_out = self.audio_dropout1(audio_out)
+        audio_out = self.audio_act1(audio_out)
+
+        audio_out = self.audio_fc2(audio_out)
+        audio_out = self.audio_dropout2(audio_out)
+        audio_out = self.audio_act2(audio_out)
+
+        # audio_out:
+        # [B, T, hidden_dim // 2]
+
+
+        # =====================================================
+        # PROFILE REPRESENTATION
+        # profile: [B, profile_dim]
+        # =====================================================
+
+        profile_out = self.profile_fc(profile)
+        profile_out = self.profile_act(profile_out)
+
+        # Repeat static profile representation across timesteps
+        profile_out = profile_out.unsqueeze(1).expand(
+            -1,
+            audio_out.size(1),
+            -1
+        )
+
+        # profile_out:
+        # [B, T, hidden_dim // 2]
+
+
+        # =====================================================
+        # ADAPTIVE GATING
+        # =====================================================
+
+        audio_score = self.audio_gate(audio_out)
+        profile_score = self.profile_gate(profile_out)
+
+        # Put the two stream scores together
+        gate_scores = torch.cat(
+            [audio_score, profile_score],
+            dim=2
+        )
+
+        # Relative importance of audio vs profile
+        gate_weights = torch.softmax(
+            gate_scores,
+            dim=2
+        )
+
+        audio_weight = gate_weights[:, :, 0:1]
+        profile_weight = gate_weights[:, :, 1:2]
+
+
+        # =====================================================
+        # FUSED REPRESENTATION
+        # =====================================================
+
+        fused = (
+            audio_weight * audio_out
+            +
+            profile_weight * profile_out
+        )
+
+        fused = self.fusion_dropout(fused)
+
+
+        # =====================================================
+        # OUTPUT
+        # =====================================================
+
+        out = self.fc_out(fused)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        # Fixed temporal smoothing
         out = F.conv1d(
             out,
             self.kernel,
