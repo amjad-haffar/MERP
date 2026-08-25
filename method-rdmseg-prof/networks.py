@@ -578,7 +578,7 @@ class lstm_double_adaptive_gating(torch.nn.Module):
             hidden_dim * 2,
             128
         )
-
+        self.audio_dropout = nn.Dropout(0.3)
         self.audio_act = nn.LeakyReLU(0.1)
 
 
@@ -623,7 +623,7 @@ class lstm_double_adaptive_gating(torch.nn.Module):
         # REGULARISATION + OUTPUT
         # =====================================================
 
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.4)
 
         self.fc_out = nn.Linear(
             128,
@@ -645,6 +645,8 @@ class lstm_double_adaptive_gating(torch.nn.Module):
             lstm_out,
             lstm_state
         )
+        
+        audio_out = self.audio_dropout(lstm_out)
 
         audio_out = self.audio_fc(lstm_out)
         audio_out = self.audio_act(audio_out)
