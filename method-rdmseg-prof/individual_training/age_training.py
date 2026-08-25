@@ -84,7 +84,9 @@ def train(train_loader, model, test_loader, fold_i, args):
             # clear gradients 
             optimizer.zero_grad()
             # forward pass
-            output = model.forward(feature)
+            # forward pass
+            ######output = model.forward(feature)
+            output = model(audio, profile)
             output = output.squeeze(1)
             
             # MSE Loss calculation
