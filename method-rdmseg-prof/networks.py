@@ -648,7 +648,7 @@ class lstm_double_adaptive_gating(torch.nn.Module):
         
         audio_out = self.audio_dropout(lstm_out)
 
-        audio_out = self.audio_fc(lstm_out)
+        audio_out = self.audio_fc(audio_out)
         audio_out = self.audio_act(audio_out)
 
         # [batch, timesteps, 128]
