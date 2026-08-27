@@ -1184,6 +1184,79 @@ class Three_FC_profile_gated(torch.nn.Module):
         )
 
         return out
+class Three_FC_audio_matched(torch.nn.Module):
+    def __init__(
+        self,
+        audio_dim,
+        hidden_dim=128
+    ):
+        super().__init__()
+
+        # -----------------------------
+        # Audio branch
+        # Same as personalized model
+        # -----------------------------
+        self.audio_fc1 = nn.Linear(
+            audio_dim,
+            hidden_dim
+        )
+
+        self.audio_dropout1 = nn.Dropout(0.2)
+        self.audio_act1 = nn.LeakyReLU(0.1)
+
+        self.audio_fc2 = nn.Linear(
+            hidden_dim,
+            hidden_dim // 2
+        )
+
+        self.audio_dropout2 = nn.Dropout(0.2)
+        self.audio_act2 = nn.LeakyReLU(0.1)
+
+        # -----------------------------
+        # Output
+        # -----------------------------
+        self.fc_out = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+        # Fixed temporal smoothing
+        kernel = torch.FloatTensor([[
+            [0.0099, 0.0301, 0.0587,
+             0.0733,
+             0.0587, 0.0301, 0.0099]
+        ]])
+
+        self.register_buffer(
+            "kernel",
+            kernel
+        )
+
+    def forward(self, audio):
+
+        out = self.audio_fc1(audio)
+        out = self.audio_dropout1(out)
+        out = self.audio_act1(out)
+
+        out = self.audio_fc2(out)
+        out = self.audio_dropout2(out)
+        out = self.audio_act2(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        out = F.conv1d(
+            out,
+            self.kernel,
+            padding=3
+        )
+
+        return out
 class lstm_double_profile_attention_improved(torch.nn.Module):
     def __init__(self, audio_dim, profile_dim, hidden_dim):
         super().__init__()

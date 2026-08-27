@@ -26,12 +26,12 @@ from util_method import save_model, pearson_corr_loss
 from testing_kfold import single_test, plot_pred_n_gts
 from individual_audio_dataset import rdm_dataset as dataset_class
 
-# from networks import lstm_double_audio_matched as archi_lstm
+from networks import lstm_double_audio_matched as archi_lstm
 
-from networks import lstm_double_adaptive_gating as late_fusion_gating
+# from networks import lstm_double_adaptive_gating as late_fusion_gating
 # from networks import lstm_double as archi_lstm
 # from networks import Three_FC_layer as archi_linear
-from networks import Three_FC_layer as archi_linear
+from networks import Three_FC_audio_matched as archi_linear
 
 
 #####################
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     else:
         setattr(args, 'model_name', f'{args.affect_type[0]}_p_{args.model_name}')
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_lstm.pkl')
-        archi = late_fusion_gating
+        archi = archi_lstm
     print(args)
 
     # check if folder with same model_name exists. if not, create folder.
