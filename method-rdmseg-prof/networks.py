@@ -1187,7 +1187,7 @@ class Three_FC_profile_gated(torch.nn.Module):
 class Three_FC_audio_matched(torch.nn.Module):
     def __init__(
         self,
-        audio_dim,
+        input_dim,
         hidden_dim=128
     ):
         super().__init__()
@@ -1197,7 +1197,7 @@ class Three_FC_audio_matched(torch.nn.Module):
         # Same as personalized model
         # -----------------------------
         self.audio_fc1 = nn.Linear(
-            audio_dim,
+            input_dim,
             hidden_dim
         )
 
