@@ -29,8 +29,10 @@ from testing_kfold import single_test, plot_pred_n_gts
 ### to edit accordingly.
 from dataset import rdm_dataset as dataset_class
 
-from networks import lstm_double as archi_lstm
-from networks import Three_FC_layer as archi_linear
+# from networks import lstm_double as archi_lstm
+# from networks import Three_FC_layer as archi_linear
+from networks import Three_FC_profile_gated as archi_linear
+from networks import lstm_double_adaptive_gating as late_fusion_gating
 
 
 #####################
@@ -55,11 +57,17 @@ def train(train_loader, model, test_loader, fold_i, args):
         for batchidx, (feature, label) in enumerate(train_loader):
             numbatches = len(train_loader)
             # Transfer to GPU
-            feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
+
+            audio = feature[:, :, :audio_dim]
+
+            # cluster one-hot is static and repeated across timesteps
+            cluster = feature[:, 0, audio_dim:]
             # clear gradients 
             optimizer.zero_grad()
             # forward pass
-            output = model.forward(feature)
+            output = model(audio, cluster)
             output = output.squeeze(1)
             
             # MSE Loss calculation
@@ -88,13 +96,21 @@ def train(train_loader, model, test_loader, fold_i, args):
             
             numbatches = len(train_loader)
             # Transfer to GPU
-            feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
+
+            audio = feature[:, :, :audio_dim]
+
+            # cluster one-hot is static and repeated across timesteps
+            cluster = feature[:, 0, audio_dim:]
+
             # print(feature.shape)
             # print('label: ', label)
             # clear gradients 
             optimizer.zero_grad()
             # forward pass
-            output = model.forward(feature)
+            output = model(audio, cluster)
+            # output = model.forward(feature)
             # print('out: ', output)
 
             output = output.squeeze(1)
@@ -161,10 +177,15 @@ def test(model, test_loader):
     losses = {'mse' : [], 'r' : []}
     with torch.no_grad():
         for feature, label in test_loader:
-            feature, label = feature.to(device).float(), label.to(device).float()
+            feature = feature.to(device).float()
+            label = label.to(device).float()
 
-            # forward pass
-            output = model(feature)
+            audio = feature[:, :, :audio_dim]
+
+            # cluster one-hot is static and repeated across timesteps
+            cluster = feature[:, 0, audio_dim:]
+
+            output = model(audio, cluster)
             output = output.squeeze(1)
 
             # loss
@@ -218,7 +239,7 @@ if __name__ == "__main__":
     else:
         setattr(args, 'model_name', f'{args.affect_type[0]}_p_{args.model_name}')
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_lstm.pkl')
-        archi = archi_lstm
+        archi = late_fusion_gating
     print(args)
 
     # check if folder with same model_name exists. if not, create folder.
@@ -314,14 +335,18 @@ if __name__ == "__main__":
         ###########################
 
         ## MODEL
-        input_dim = (
-            list(
-                train_feat_dict.values()
-            )[0].shape[1]
-            + args.n_clusters
-        )
-        print('check input_dim: ', input_dim)
-        model = archi(input_dim=input_dim, hidden_dim=args.hidden_dim).to(device)
+        audio_dim = 260
+        profile_dim = args.n_clusters
+
+        print("audio_dim:", audio_dim)
+        print("cluster_dim:", profile_dim)
+        print("total:", audio_dim + profile_dim)
+
+        model = archi(
+            audio_dim=audio_dim,
+            profile_dim=profile_dim,
+            hidden_dim=args.hidden_dim,
+        ).to(device)
         model.float()
         print(model)
 
