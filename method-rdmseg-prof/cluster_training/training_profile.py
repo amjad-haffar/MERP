@@ -76,6 +76,24 @@ def train(train_loader, model, test_loader, fold_i, args):
 
             epoch_loss_log['mse'].append(loss_mse.item())
             epoch_loss_log['r'].append(loss_r.item())
+            if fold_i == 0 and batchidx == 0:
+                print("SANITY CHECK")
+                print("Full feature:", feature.shape)
+                print("Audio:", audio.shape)
+                print("Cluster:", cluster.shape)
+                print("Label:", label.shape)
+                print("Example cluster:", cluster[0])
+
+                assert feature.shape[-1] == audio_dim + args.n_clusters
+                assert cluster.shape[-1] == args.n_clusters
+
+                print(
+                    "Cluster repeated:",
+                    torch.allclose(
+                        feature[:, 0, audio_dim:],
+                        feature[:, 1, audio_dim:]
+                    )
+    )
         
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
