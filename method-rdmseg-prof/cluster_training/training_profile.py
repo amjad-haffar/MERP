@@ -146,6 +146,11 @@ def train(train_loader, model, test_loader, fold_i, args):
             # loss.backward()
             loss_mse.backward()
             # update parameters
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                max_norm=1.0
+            )
+
             optimizer.step()
 
             # record training loss
