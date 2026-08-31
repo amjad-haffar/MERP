@@ -152,7 +152,8 @@ def train(train_loader, model, test_loader, fold_i, args):
             )
 
             optimizer.step()
-
+            
+            scheduler.step()
             # record training loss
             epoch_loss_log['mse'].append(loss_mse.item())
             epoch_loss_log['r'].append(loss_r.item())
@@ -373,6 +374,11 @@ if __name__ == "__main__":
         model.float()
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=[10, 20],
+            gamma=0.1
+        )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
