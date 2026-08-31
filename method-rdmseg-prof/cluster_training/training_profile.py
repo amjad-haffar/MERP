@@ -153,13 +153,14 @@ def train(train_loader, model, test_loader, fold_i, args):
 
             optimizer.step()
             
-            scheduler.step()
             # record training loss
             epoch_loss_log['mse'].append(loss_mse.item())
             epoch_loss_log['r'].append(loss_r.item())
 
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
             
+
+        scheduler.step()
         # log average loss
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
