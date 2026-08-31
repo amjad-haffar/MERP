@@ -173,7 +173,10 @@ def train(train_loader, model, test_loader, fold_i, args):
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
         # if (epoch + 1) % 5 == 0:
         test_ave_mse, test_ave_r = test(model, test_loader)
-
+        print(
+            "Current LR:",
+            optimizer.param_groups[0]["lr"]
+        )
         print(
             f'Fold: {fold_i} || Epoch: {epoch:3} || '
             f'test mse: {test_ave_mse:.4f} || '
@@ -377,8 +380,8 @@ if __name__ == "__main__":
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
-            milestones=[10, 20],
-            gamma=0.1
+            milestones=[15, 30],
+            gamma=0.5
         )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
