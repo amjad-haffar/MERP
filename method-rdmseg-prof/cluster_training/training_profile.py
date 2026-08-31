@@ -378,11 +378,11 @@ if __name__ == "__main__":
         model.float()
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer,
-            milestones=[20, 35],
-            gamma=0.5
+            gamma=0.97
         )
+        
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
         file_name= f'{args.model_name}_{fold_i}'
