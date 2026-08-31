@@ -366,7 +366,6 @@ if __name__ == "__main__":
             hidden_dim=args.hidden_dim,
         ).to(device)
         model.float()
-        print(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         
