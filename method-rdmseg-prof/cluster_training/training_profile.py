@@ -253,6 +253,17 @@ if __name__ == "__main__":
         type=int,
         default=4
     )
+    parser.add_argument(
+        "--cluster_exp",
+        type=str,
+        default="profile",
+        choices=[
+            "profile",
+            "behaviour_profile_kmeans",
+            "behaviour_mds",
+            "behaviour_profile_mds",
+        ],
+    )
 
     args = parser.parse_args()
     # kinda messy but this ensures the model_names can be the same but saved separately.
@@ -260,11 +271,19 @@ if __name__ == "__main__":
 
 
     if args.linear:
-        setattr(args, 'model_name', f'linear_{args.affect_type[0]}_p_{args.model_name}')
+        setattr(
+            args,
+            "model_name",
+            f"linear_{args.cluster_exp}_{args.affect_type[0]}_{args.model_name}"
+        )
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_linear.pkl')
         archi = archi_linear
     else:
-        setattr(args, 'model_name', f'{args.affect_type[0]}_p_{args.model_name}')
+        setattr(
+            args,
+            "model_name",
+            f"{args.cluster_exp}_{args.affect_type[0]}_{args.model_name}"
+        )
         exp_log_filepath = os.path.join(dir_path,save_models_foldername,'test_log_lstm.pkl')
         archi = late_fusion_gating
     print(args)
@@ -281,27 +300,48 @@ if __name__ == "__main__":
     # read labels from pickle
     
     # exps = pd.read_pickle('data/exps_std_a_profile_ave.pkl')
-    if args.affect_type == "valences":
-        exps = pd.read_pickle(
-            os.path.join(
-                DATA_DIR,
-                "exps_cluster_valence_k4.pkl"
-            )
-        )
+    cluster_files = {
 
-    elif args.affect_type == "arousals":
+        "profile": {
+            "valences": "exps_cluster_valence_k4.pkl",
+            "arousals": "exps_cluster_arousal_k4.pkl",
+        },
 
-        exps = pd.read_pickle(
-            os.path.join(
-                DATA_DIR,
-                "exps_cluster_arousal_k4.pkl"
-            )
-        )
+        "behaviour_profile_kmeans": {
+            "valences": "exps_behaviour_profile_kmeans_valence_k4.pkl",
+            "arousals": "exps_behaviour_profile_kmeans_arousal_k4.pkl",
+        },
 
-    else:
-        raise ValueError(
-            'affect_type must be "valences" or "arousals"'
+        "behaviour_mds": {
+            "valences": "exps_behaviour_mds_valence_k4.pkl",
+            "arousals": "exps_behaviour_mds_arousal_k4.pkl",
+        },
+
+        "behaviour_profile_mds": {
+            "valences": "exps_behaviour_profile_mds_valence_k4.pkl",
+            "arousals": "exps_behaviour_profile_mds_arousal_k4.pkl",
+        },
+    }
+    data_file = cluster_files[
+        args.cluster_exp
+    ][args.affect_type]
+
+    exps = pd.read_pickle(
+        os.path.join(
+            DATA_DIR,
+            data_file,
         )
+    )
+
+    print(
+        "Cluster experiment:",
+        args.cluster_exp
+    )
+
+    print(
+        "Dataset:",
+        data_file
+    )
     # print(exps.head())
     
     ####################

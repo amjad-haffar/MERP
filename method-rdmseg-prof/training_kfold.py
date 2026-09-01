@@ -114,6 +114,10 @@ def train(train_loader, model, test_loader, fold_i, args):
             # backward pass
             # loss.backward()
             loss_mse.backward()
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                max_norm=1.0
+            )
             # update parameters
             optimizer.step()
 
@@ -124,6 +128,8 @@ def train(train_loader, model, test_loader, fold_i, args):
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
             
         # log average loss
+        
+        scheduler.step()
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
         # print(f'Initial round without training || mse = {aveloss_mse:.2f} || r = {aveloss_r:.2f}')
@@ -315,6 +321,10 @@ if __name__ == "__main__":
         print(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer,
+            gamma=0.97
+        )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
