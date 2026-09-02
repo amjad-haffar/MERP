@@ -145,7 +145,7 @@ def train(train_loader, model, test_loader, fold_i, args):
 
         epoch_duration = time.time() - start_time
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
-        if (epoch + 1) % 1 == 0:
+        if (epoch + 1) % args.test_print == 0:
             test_ave_mse, test_ave_r = test(model, test_loader)
 
             print(
@@ -226,6 +226,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '--use_sched',
         action='store_true'
+    )
+    parser.add_argument(
+        '--test_print',
+        type=int,
+        default=5
     )
     
     
