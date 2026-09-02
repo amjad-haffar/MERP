@@ -34,9 +34,11 @@ def pearson_corr_loss(output, target, reduction='mean'):
         # print('shape of mean: ', x.mean(1).shape)
         # print('shape of mean unsqueeze(-1): ', x.mean(1).unsqueeze(-1).shape)
 
+        eps = 1e-8
+
         cost = (vx * vy).sum(1) / (
-            torch.sqrt((vx ** 2).sum(1)) *
-            torch.sqrt((vy ** 2).sum(1))
+            torch.sqrt((vx ** 2).sum(1) + eps) *
+            torch.sqrt((vy ** 2).sum(1) + eps)
         )
         cost[torch.isnan(cost)] = 0
         # cost = cost*-1 # no need for this since it is not used during training.
