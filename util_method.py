@@ -40,7 +40,7 @@ def pearson_corr_loss(output, target, reduction='mean'):
             torch.sqrt((vx ** 2).sum(1) + eps) *
             torch.sqrt((vy ** 2).sum(1) + eps)
         )
-        cost[torch.isnan(cost)] = 0
+        cost = torch.nan_to_num(cost, nan=0.0)
         # cost = cost*-1 # no need for this since it is not used during training.
         # print('shape of cost: ', (vx * vy).sum(1).shape)
         # reducing the batch of pearson to either mean or sum
