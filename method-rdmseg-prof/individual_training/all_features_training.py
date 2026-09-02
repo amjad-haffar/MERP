@@ -485,7 +485,7 @@ if __name__ == "__main__":
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
             milestones=[20,40,45],
-            gamma=0.5,
+            gamma=0.4,
         )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
