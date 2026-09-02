@@ -14,7 +14,150 @@ from torch.nn import functional as F
 from rdm_dataset import rdm_dataset 
 from torch.utils.data import DataLoader
 
+class lstm_double_audio_matched(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
 
+        self.lstm2 = nn.LSTM(
+            hidden_dim * 2,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True
+        )
+
+        # Match the representation size used in the personalized model
+        self.audio_fc = nn.Linear(
+            hidden_dim * 2,
+            128
+        )
+
+        self.audio_act = nn.LeakyReLU(0.1)
+
+        # Same regularisation strength
+        self.dropout = nn.Dropout(0.4)
+
+        self.fc_out = nn.Linear(
+            128,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+
+    def forward(self, x):
+
+        lstm_out, lstm_state = self.lstm(x)
+
+        lstm_out, _ = self.lstm2(
+            lstm_out,
+            lstm_state
+        )
+
+        out = self.audio_fc(lstm_out)
+        out = self.audio_act(out)
+
+        out = self.dropout(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        return out
+
+
+    def load_my_state_dict(self, state_dict):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+
+            if name not in own_state:
+                continue
+
+            if isinstance(param, nn.Parameter):
+                param = param.data
+
+class Three_FC_audio_matched(torch.nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128
+    ):
+        super().__init__()
+
+        # -----------------------------
+        # Audio branch
+        # Same as personalized model
+        # -----------------------------
+        self.audio_fc1 = nn.Linear(
+            input_dim,
+            hidden_dim
+        )
+
+        self.audio_dropout1 = nn.Dropout(0.2)
+        self.audio_act1 = nn.LeakyReLU(0.1)
+
+        self.audio_fc2 = nn.Linear(
+            hidden_dim,
+            hidden_dim // 2
+        )
+
+        self.audio_dropout2 = nn.Dropout(0.2)
+        self.audio_act2 = nn.LeakyReLU(0.1)
+
+        # -----------------------------
+        # Output
+        # -----------------------------
+        self.fc_out = nn.Linear(
+            hidden_dim // 2,
+            1
+        )
+
+        self.actout = nn.Tanh()
+
+        # Fixed temporal smoothing
+        kernel = torch.FloatTensor([[
+            [0.0099, 0.0301, 0.0587,
+             0.0733,
+             0.0587, 0.0301, 0.0099]
+        ]])
+
+        self.register_buffer(
+            "kernel",
+            kernel
+        )
+
+    def forward(self, audio):
+
+        out = self.audio_fc1(audio)
+        out = self.audio_dropout1(out)
+        out = self.audio_act1(out)
+
+        out = self.audio_fc2(out)
+        out = self.audio_dropout2(out)
+        out = self.audio_act2(out)
+
+        out = self.fc_out(out)
+        out = self.actout(out)
+
+        out = out.flatten(1)
+        out = out.unsqueeze(1)
+
+        out = F.conv1d(
+            out,
+            self.kernel,
+            padding=3
+        )
+
+        return out
 class lstm_single(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim):
         super(lstm_single, self).__init__()
