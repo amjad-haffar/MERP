@@ -111,7 +111,13 @@ def train(train_loader, model, test_loader, fold_i, args):
             
             # backward pass
             # loss.backward()
-            loss_mse.backward()
+            if args.use_r_loss:
+                loss = loss_mse - 0.1 * loss_r
+            else:
+                loss = loss_mse
+
+            loss.backward()
+            # loss_mse.backward()
             # update parameters
             optimizer.step()
 
@@ -120,7 +126,8 @@ def train(train_loader, model, test_loader, fold_i, args):
             epoch_loss_log['r'].append(loss_r.item())
 
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
-            
+        if args.use_sched:
+            scheduler.step()    
         # log average loss
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
@@ -131,7 +138,7 @@ def train(train_loader, model, test_loader, fold_i, args):
 
         epoch_duration = time.time() - start_time
         print(f'Fold: {fold_i} || Epoch: {epoch:3} || mse: {aveloss_mse:8.5f} || r: {aveloss_r:8.5f} || time taken (s): {epoch_duration:8f}')
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % args.test_print == 0:
             test_ave_mse, test_ave_r = test(model, test_loader)
 
             print(
@@ -200,6 +207,19 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.0001)
     # parser.add_argument('--mse_weight', type=float, default=1.0)
     # parser.add_argument('--r_weight', type=float, default=0.1)
+    parser.add_argument(
+        '--test_print',
+        type=int,
+        default=5
+    )
+    parser.add_argument(
+        '--use_r_loss',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--use_sched',
+        action='store_true'
+    )
     
     
 
@@ -357,6 +377,11 @@ if __name__ == "__main__":
         model.float()
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=[20,40,45],
+            gamma=0.5,
+        )
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
 
