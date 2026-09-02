@@ -142,9 +142,9 @@ def train(train_loader, model, test_loader, fold_i, args):
             loss_r = pearson_corr_loss(output, label)
             # loss = loss_mse*args.mse_weight + loss_r*args.r_weight
             if args.use_r_loss:
-                loss = loss_mse - 0.9 * loss_r
+                loss = -loss_r
             else:
-                loss = loss_mse
+                loss = -loss_r
 
             loss.backward()
             # update parameters
