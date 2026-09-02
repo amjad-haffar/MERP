@@ -141,10 +141,12 @@ def train(train_loader, model, test_loader, fold_i, args):
             loss_mse = F.mse_loss(output, label)
             loss_r = pearson_corr_loss(output, label)
             # loss = loss_mse*args.mse_weight + loss_r*args.r_weight
-            
-            # backward pass
-            # loss.backward()
-            loss_mse.backward()
+            if args.use_r_loss:
+                loss = loss_mse - 0.1 * loss_r
+            else:
+                loss = loss_mse
+
+            loss.backward()
             # update parameters
             torch.nn.utils.clip_grad_norm_(
                 model.parameters(),
@@ -160,7 +162,8 @@ def train(train_loader, model, test_loader, fold_i, args):
             print(f'Epoch: {epoch} || Batch: {batchidx}/{numbatches} || mse = {loss_mse.item():5f} || r = {loss_r.item():5f}', end = '\r')
             
 
-        scheduler.step()
+        if args.use_sched:
+            scheduler.step()
         # log average loss
         aveloss_mse = np.average(epoch_loss_log['mse'])
         aveloss_r = np.average(epoch_loss_log['r'])
@@ -246,6 +249,14 @@ if __name__ == "__main__":
     parser.add_argument('--num_timesteps', type=int, default=30)
     # parser.add_argument('--step_size', type=int, default=1)
     parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument(
+        '--use_r_loss',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--use_sched',
+        action='store_true'
+    )
     # parser.add_argument('--mse_weight', type=float, default=1.0)
     # parser.add_argument('--r_weight', type=float, default=0.1)
     parser.add_argument(

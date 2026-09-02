@@ -100,7 +100,11 @@ def train(train_loader, model, test_loader, fold_i, args):
 
             # backward pass
             # loss.backward()
-            loss_mse.backward()
+            if args.use_r_loss:
+                loss = loss_mse - 0.1 * loss_r
+            else:
+                loss = loss_mse
+            loss.backward()
             # update parameters
             optimizer.step()
 
@@ -179,6 +183,14 @@ if __name__ == "__main__":
     parser.add_argument('--num_timesteps', type=int, default=30)
     # parser.add_argument('--step_size', type=int, default=5)
     parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument(
+        '--use_r_loss',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--use_sched',
+        action='store_true'
+    )
     # parser.add_argument('--mse_weight', type=float, default=1.0)
     # parser.add_argument('--r_weight', type=float, default=1.0)
     # parser.add_argument('--conditions', nargs='+', type=str, default=[])
@@ -294,6 +306,11 @@ if __name__ == "__main__":
         print(model)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=[20,30,40,45],
+            gamma=0.5,
+        )
 
         
         model, train_ave_mse, train_ave_r, test_ave_mse, test_ave_r = train(train_loader, model, test_loader, fold_i, args)
